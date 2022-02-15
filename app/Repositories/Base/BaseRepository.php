@@ -11,6 +11,9 @@ abstract class BaseRepository implements BaseInterface
      */
     protected Model $model;
 
+    /**
+     * @param Model $model
+     */
     public function __construct(Model $model)
     {
         $this->model = $model;
@@ -19,25 +22,9 @@ abstract class BaseRepository implements BaseInterface
     /**
      * @inheritDoc
      */
-    public function findByFilters(array $filters, array $select, array $relationships)
+    public function deleteWhere(array $filters): mixed
     {
-        // TODO: Implement findByFilters() method.
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function findById(mixed $id)
-    {
-        // TODO: Implement findById() method.
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function findOneByFilters(array $filters, array $select, array $relationships)
-    {
-        // TODO: Implement findOneByFilters() method.
+        return $this->model->where($filters)->delete();
     }
 
     /**

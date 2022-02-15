@@ -6,26 +6,9 @@ interface BaseInterface
 {
     /**
      * @param array $filters
-     * @param array $select
-     * @param array $relationships
      * @return mixed
      */
-    public function findByFilters(array $filters, array $select, array $relationships);
-
-    /**
-     * @param string|int $id
-     * @return mixed
-     */
-    public function findById(mixed $id);
-
-    /**
-     * @param array $filters
-     * @param array $select
-     * @param array $relationships
-     * @return mixed
-     */
-    public function findOneByFilters(array $filters, array $select, array $relationships);
-
+    public function deleteWhere(array $filters): mixed;
 
     /**
      * @param string $name

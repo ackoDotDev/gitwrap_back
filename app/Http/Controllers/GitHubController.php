@@ -2,28 +2,49 @@
 
 namespace App\Http\Controllers;
 
-use App\Repositories\Contracts\UserRepository;
+use App\Http\Requests\ProfileRequest;
+use App\Http\Requests\RepositoriesRequest;
+use App\Http\Requests\RepositoryRequest;
+use App\Services\Github\Repositories;
+use App\Services\Github\Users;
+use App\Services\User\UserHandler;
+use Illuminate\Http\Client\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Exception;
-use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
-use App\Models\User;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 
 class GitHubController extends Controller
 {
     /**
-     * @var UserRepository
+     * @var Repositories
      */
-    private UserRepository $userRepository;
+    private Repositories $repositories;
 
     /**
-     * @param UserRepository $userRepository
+     * @var Users
      */
-    public function __construct(UserRepository $userRepository)
-    {
-        $this->userRepository = $userRepository;
+    private Users $users;
+
+    /**
+     * @var UserHandler
+     */
+    private UserHandler $userHandler;
+
+    /**
+     * @param UserHandler $userHandler
+     * @param Repositories $repositories
+     * @param Users $users
+     */
+    public function __construct(
+        UserHandler $userHandler,
+        Repositories $repositories,
+        Users $users,
+    ) {
+        $this->repositories = $repositories;
+        $this->users = $users;
+        $this->userHandler = $userHandler;
     }
 
     /**
@@ -31,34 +52,62 @@ class GitHubController extends Controller
      */
     public function gitRedirect(): JsonResponse
     {
-        return response()->json([
-            'url' => Socialite::driver('github')->stateless()->redirect()->getTargetUrl()
-        ]);
+        return response()->json(
+            [
+                'url' => Socialite::driver('github')->stateless()->redirect()->getTargetUrl()
+            ]
+        );
     }
 
-    public function gitCallback()
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
+    public function gitCallback(Request $request): JsonResponse
     {
-        try {
+        $githubUser = Socialite::driver('github')->stateless()->user();
 
-            $githubUser = Socialite::driver('github')->stateless()->user();
+        $user = $this->userHandler->handleUser($githubUser);
 
-            $user = $this->userRepository->firstOrCreate(
-                ['github_id' =>  $githubUser->getId()],
-                [
-                    'uuid' => Str::uuid()->toString(),
-                    'name' => $githubUser->getName(),
-                    'avatar' => $githubUser->getAvatar()
-                ]
-            );
+        $token = $user->createToken($request->get('browser_id'));
 
-            $token = $user->createToken("auth");
+        $this->userHandler->handleMail($user);
 
-            return response()->json([
+        return response()->json(
+            [
                 'user' => $user,
                 'token' => $token->plainTextToken
-            ]);
+            ]
+        );
+    }
 
-        } catch (Exception $e) {
-            dd($e->getMessage());
-        }
-    }}
+    /**
+     * @param ProfileRequest $request
+     * @return Response
+     */
+    public function profile(ProfileRequest $request): Response
+    {
+        return $this->users->getUserData($request->get("name"));
+    }
+
+    /**
+     * @param RepositoriesRequest $request
+     * @return Response
+     */
+    public function repositories(RepositoriesRequest $request): Response
+    {
+        return $this->repositories->getRepositoriesForUser($request->get("name"));
+    }
+
+    /**
+     * @param RepositoryRequest $request
+     * @return JsonResponse
+     */
+    public function repository(RepositoryRequest $request): JsonResponse
+    {
+        return $this->repositories->getRepositoryForUser($request->get("name"));
+    }
+
+}

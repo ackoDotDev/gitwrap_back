@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -18,7 +19,10 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'uuid',
+        'github_id',
+        'avatar',
         'name',
+        'username',
         'email',
         'company',
     ];
@@ -31,4 +35,20 @@ class User extends Authenticatable
     protected $hidden = [
         'remember_token',
     ];
+
+    /**
+ * @return HasMany
+ */
+    public function gitTokens(): HasMany
+    {
+        return $this->hasMany(GitToken::class);
+    }
+
+    /**
+     * @return HasMany
+     */
+    public function userBrowsers(): HasMany
+    {
+        return $this->hasMany(UserBrowser::class);
+    }
 }
